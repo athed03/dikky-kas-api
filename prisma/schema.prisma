@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Authentication ────────────────────────────────────────
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  role      String   @default("cashier") // "admin", "cashier", "supervisor"
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dailySessions DailySession[]
+}
+
+// ─── Daily Operations ──────────────────────────────────────
+model DailySession {
+  id            Int       @id @default(autoincrement())
+  date          DateTime  @db.Date
+  openingAmount Float
+  openingNotes  String?
+  openedBy      Int
+  openedAt      DateTime  @default(now())
+
+  // Closing fields (nullable until closed)
+  actualCash    Float?
+  expectedCash  Float?
+  difference    Float?
+  closingNotes  String?
+  closedAt      DateTime?
+  status        String    @default("OPEN") // "OPEN", "CLOSED"
+
+  user User @relation(fields: [openedBy], references: [id])
+
+  @@unique([date, openedBy])
+}
+
+// ─── Resto Orders ──────────────────────────────────────────
+model Order {
+  id            String   @id @default(cuid())
+  customer      String
+  items         Json     // Array of { productId, name, qty, price }
+  subtotal      Float
+  tax           Float    @default(0)
+  total         Float
+  status        String   @default("OPEN") // "OPEN", "SETTLED", "VOID"
+  paymentMethod String?  // "Cash", "QRIS", "Debit", "Credit"
+  amountPaid    Float?
+  date          DateTime @db.Date
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ─── Mobil (Car Services) ──────────────────────────────────
+model MobilTransaction {
+  id            String   @id @default(cuid())
+  customerName  String
+  serviceType   String   // "wash", "parking", "other"
+  vehicleId     String?  // License plate
+  amount        Float
+  paymentMethod String   @default("Cash")
+  notes         String?
+  status        String   @default("COMPLETED")
+  date          DateTime @db.Date
+  createdAt     DateTime @default(now())
+}
+
+// ─── Motor (Bike Rental) ──────────────────────────────────
+model MotorRental {
+  id            String   @id @default(cuid())
+  customerName  String
+  vehicleId     String   // License plate or Motor ID
+  duration      Int      // Days
+  amount        Float
+  paymentMethod String   @default("Cash")
+  notes         String?
+  status        String   @default("ACTIVE") // "ACTIVE", "RETURNED"
+  date          DateTime @db.Date
+  createdAt     DateTime @default(now())
+}
+
+// ─── EDC Transactions ──────────────────────────────────────
+model EdcTransaction {
+  id           String   @id @default(cuid())
+  type         String   // "WITHDRAWAL", "PAYMENT"
+  cardType     String   // "DEBIT", "CREDIT"
+  provider     String   // "BCA", "BRI", etc.
+  amount       Float    // Total swipe amount
+  cashOutAmount Float   @default(0) // Amount given to customer
+  fee          Float    @default(0)
+  refNumber    String?
+  date         DateTime @db.Date
+  createdAt    DateTime @default(now())
+}
+
+// ─── Money Changer ─────────────────────────────────────────
+model MoneyChangerTransaction {
+  id            String   @id @default(cuid())
+  type          String   // "BUY" (Cash Out) or "SELL" (Cash In)
+  currency      String   // "USD", "SGD", etc.
+  amountForeign Float
+  rate          Float
+  amountIdr     Float
+  notaNumber    String?
+  date          DateTime @db.Date
+  createdAt     DateTime @default(now())
+}
+
+// ─── Cash Transactions (Log Kas) ───────────────────────────
+model CashTransaction {
+  id          String   @id @default(cuid())
+  type        String   // "IN" or "OUT"
+  category    String   @default("operational") // "operational", "equity", "misc"
+  amount      Float
+  description String?
+  date        DateTime @db.Date
+  createdAt   DateTime @default(now())
+}
+
+// ─── Master Data ───────────────────────────────────────────
+model Product {
+  id        Int      @id @default(autoincrement())
+  name      String
+  price     Float
+  category  String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Vehicle {
+  id        Int      @id @default(autoincrement())
+  plate     String   @unique
+  name      String   // "Honda Beat", "Yamaha NMAX", etc.
+  type      String   @default("bike") // "bike" only (Motor)
+  status    String   @default("AVAILABLE") // "AVAILABLE", "RENTED"
+  createdAt DateTime @default(now())
+}

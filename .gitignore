@@ -1,0 +1,8 @@
+node_modules/
+generated/
+.env
+.vercel
+*.log
+prisma_*.txt
+migrate_*.txt
+push_*.txt
