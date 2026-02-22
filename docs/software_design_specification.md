@@ -1,7 +1,7 @@
 # Software Design Specification: Dikky Kas
 
-**Version**: 2.0  
-**Last Updated**: 2026-02-19
+**Version**: 2.1  
+**Last Updated**: 2026-02-21
 
 ---
 
@@ -57,12 +57,30 @@ dikky-kas-api/
 │   ├── response.js            # success/error helpers + date utils
 │   ├── validate.js            # Zod validation middleware
 │   └── swagger.js             # OpenAPI 3.0 spec config
+├── __tests__/
+│   ├── setup.js               # Shared test setup
+│   ├── helpers/
+│   │   ├── mockPrisma.js      # Prisma mock factory (all models)
+│   │   └── authHelper.js      # JWT token helper for tests
+│   ├── lib/
+│   │   ├── response.test.js   # Tests for response helpers
+│   │   ├── validate.test.js   # Tests for Zod middleware
+│   │   └── auth.test.js       # Tests for JWT auth
+│   └── routes/
+│       ├── auth.test.js       # Login endpoint tests
+│       ├── daily.test.js      # Daily operations tests
+│       ├── resto.test.js      # Restaurant order tests
+│       ├── mobil.test.js      # Car service tests
+│       ├── motor.test.js      # Bike rental tests
+│       ├── transactions.test.js # EDC/MC/Cash tests
+│       └── masterdata.test.js # Product tests
 ├── prisma/
 │   ├── schema.prisma          # Data models
 │   ├── seed.js                # Seed data (users, products, vehicles)
 │   └── migrations/            # Prisma migrations
 ├── generated/
 │   └── prisma/                # Generated Prisma Client (gitignored)
+├── jest.config.js             # Jest test configuration
 ├── prisma.config.ts           # Prisma 7 CLI config (datasource URL)
 ├── vercel.json                # Vercel deployment config
 └── package.json
@@ -235,7 +253,37 @@ npm run dev
 
 ---
 
-## 8. Constraints
+## 8. Unit Testing
+
+### Stack
+-   **Test Runner**: Jest
+-   **HTTP Testing**: supertest (against Express app)
+-   **Mocking**: jest.fn() mocks for all Prisma models (no real database needed)
+
+### Test Coverage
+| Suite | File | Tests |
+|---|---|---|
+| **Lib** | `response.test.js` | `success()`, `error()`, `getTodayDate()`, `parseDate()` |
+| **Lib** | `validate.test.js` | Valid body, invalid body, missing fields, wrong types |
+| **Lib** | `auth.test.js` | `generateToken()`, `authenticateToken()` (valid/invalid/expired) |
+| **Route** | `auth.test.js` | Login: valid, user not found, wrong password, validation |
+| **Route** | `daily.test.js` | Opening balance, closing preview (cash flow calc), daily closing |
+| **Route** | `resto.test.js` | Orders: list, create, settle (+ 404, already settled) |
+| **Route** | `mobil.test.js` | Car service: create, list |
+| **Route** | `motor.test.js` | Bike rental: create, list, vehicles |
+| **Route** | `transactions.test.js` | EDC, Money Changer (BUY/SELL), Cash (balanceAfter) |
+| **Route** | `masterdata.test.js` | Products: auth check, list, empty |
+
+**Total: 10 suites, 59 tests**
+
+### Running Tests
+```bash
+npm test
+```
+
+---
+
+## 9. Constraints
 1.  **Do NOT** change the `calculateExpectedCash` formula without explicit user request.
 2.  **Do NOT** revert the "Money Changer" or "Log Kas" naming conventions.
 3.  **Prisma 7**: Client generated to `generated/prisma/` (not `node_modules`). Imports must use `../generated/prisma`.

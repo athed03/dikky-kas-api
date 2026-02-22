@@ -8,7 +8,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.js",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "test": "jest --verbose --forceExit"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -31,7 +32,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "jest": "^30.2.0",
     "nodemon": "^3.1.11",
-    "prisma": "^7.4.0"
+    "prisma": "^7.4.0",
+    "supertest": "^7.2.2"
   }
 }
