@@ -44,7 +44,7 @@ model DailySession {
 
 // ─── Resto Orders ──────────────────────────────────────────
 model Order {
-  id            String   @id @default(cuid())
+  id            Int      @id @default(autoincrement())
   customer      String
   items         Json     // Array of { productId, name, qty, price }
   subtotal      Float
@@ -60,7 +60,7 @@ model Order {
 
 // ─── Mobil (Car Services) ──────────────────────────────────
 model MobilTransaction {
-  id            String   @id @default(cuid())
+  id            Int      @id @default(autoincrement())
   customerName  String
   serviceType   String   // "wash", "parking", "other"
   vehicleId     String?  // License plate
@@ -74,7 +74,7 @@ model MobilTransaction {
 
 // ─── Motor (Bike Rental) ──────────────────────────────────
 model MotorRental {
-  id            String   @id @default(cuid())
+  id            Int      @id @default(autoincrement())
   customerName  String
   vehicleId     String   // License plate or Motor ID
   duration      Int      // Days
@@ -88,7 +88,7 @@ model MotorRental {
 
 // ─── EDC Transactions ──────────────────────────────────────
 model EdcTransaction {
-  id           String   @id @default(cuid())
+  id           Int      @id @default(autoincrement())
   type         String   // "WITHDRAWAL", "PAYMENT"
   cardType     String   // "DEBIT", "CREDIT"
   provider     String   // "BCA", "BRI", etc.
@@ -102,7 +102,7 @@ model EdcTransaction {
 
 // ─── Money Changer ─────────────────────────────────────────
 model MoneyChangerTransaction {
-  id            String   @id @default(cuid())
+  id            Int      @id @default(autoincrement())
   type          String   // "BUY" (Cash Out) or "SELL" (Cash In)
   currency      String   // "USD", "SGD", etc.
   amountForeign Float
@@ -115,7 +115,7 @@ model MoneyChangerTransaction {
 
 // ─── Cash Transactions (Log Kas) ───────────────────────────
 model CashTransaction {
-  id          String   @id @default(cuid())
+  id          Int      @id @default(autoincrement())
   type        String   // "IN" or "OUT"
   category    String   @default("operational") // "operational", "equity", "misc"
   amount      Float

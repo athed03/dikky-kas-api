@@ -5,6 +5,7 @@ const { authenticateToken } = require('../lib/auth');
 const { validate } = require('../lib/validate');
 const { success, error, getTodayDate, parseDate } = require('../lib/response');
 
+
 const router = express.Router();
 router.use(authenticateToken);
 

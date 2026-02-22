@@ -5,6 +5,7 @@ const { authenticateToken } = require('../lib/auth');
 const { validate } = require('../lib/validate');
 const { success, error, getTodayDate, parseDate } = require('../lib/response');
 
+
 const router = express.Router();
 router.use(authenticateToken);
 
@@ -186,7 +187,7 @@ router.post('/orders', validate(createOrderSchema), async (req, res) => {
  */
 router.post('/orders/:id/settle', validate(settleOrderSchema), async (req, res) => {
     try {
-        const { id } = req.params;
+        const id = parseInt(req.params.id, 10);
         const { paymentMethod, amountPaid } = req.body;
 
         const order = await prisma.order.findUnique({ where: { id } });

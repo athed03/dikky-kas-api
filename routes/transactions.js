@@ -5,14 +5,15 @@ const { authenticateToken } = require('../lib/auth');
 const { validate } = require('../lib/validate');
 const { success, error, getTodayDate, parseDate } = require('../lib/response');
 
+
 const router = express.Router();
 router.use(authenticateToken);
 
 // ─── Schemas ───────────────────────────────────────────────
 const edcSchema = z.object({
     type: z.enum(['WITHDRAWAL', 'PAYMENT']),
-    cardType: z.enum(['DEBIT', 'CREDIT']),
-    provider: z.string().min(1),
+    cardType: z.enum(['VISA', 'MASTER']),
+    provider: z.string().min(0).default(""),
     amount: z.number().positive(),
     cashOutAmount: z.number().min(0).default(0),
     fee: z.number().min(0).default(0),
