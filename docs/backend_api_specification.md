@@ -1,7 +1,7 @@
 # Backend API Specification: Dikky Kas
 
-**Version**: 2.0  
-**Last Updated**: 2026-02-19
+**Version**: 3.0  
+**Last Updated**: 2026-02-22
 
 ---
 
@@ -11,7 +11,7 @@
 -   **Authentication**: Bearer Token (JWT) in `Authorization` header.
 -   **Content-Type**: `application/json`
 -   **Date Format**: ISO 8601 (`YYYY-MM-DD` for query params, full ISO for timestamps)
--   **ID Format**: `cuid` (e.g., `cm7k5x0z20001...`) — all entity IDs use Prisma `@default(cuid())`
+-   **ID Format**: Auto-increment integers — all entity IDs use Prisma `@default(autoincrement())`
 
 ### Tech Stack
 -   **Runtime**: Node.js + Express
@@ -259,6 +259,8 @@ Returns orders sorted by `createdAt desc`. Defaults to today.
 ### 4.3. Settle Order
 **POST** `/resto/orders/{id}/settle`
 
+> **Balance Side Effect**: If `paymentMethod` is `Cash`, automatically updates the `resto` balance.
+
 **Request Body:**
 ```json
 {
@@ -270,7 +272,7 @@ Returns orders sorted by `createdAt desc`. Defaults to today.
 **Response (200 OK):**
 ```json
 {
-  "id": "cm7k5x...",
+  "id": 1,
   "status": "SETTLED"
 }
 ```
@@ -287,6 +289,8 @@ Returns orders sorted by `createdAt desc`. Defaults to today.
 ### 5.1. Record Car Service Transaction
 **POST** `/mobil/transactions`
 
+> **Balance Side Effect**: If `paymentMethod` is `Cash`, automatically updates the `mobil` balance per `vehicleId`.
+
 **Request Body:**
 ```json
 {
@@ -302,7 +306,7 @@ Returns orders sorted by `createdAt desc`. Defaults to today.
 **Response (201 Created):**
 ```json
 {
-  "id": "cm7k5x...",
+  "id": 1,
   "status": "COMPLETED"
 }
 ```
@@ -320,6 +324,8 @@ Returns transactions sorted by `createdAt desc`. Defaults to today.
 ### 6.1. Create Bike Rental
 **POST** `/motor/rentals`
 
+> **Balance Side Effect**: If `paymentMethod` is `Cash`, automatically updates the `motor` balance per `vehicleId`.
+
 **Request Body:**
 ```json
 {
@@ -335,7 +341,7 @@ Returns transactions sorted by `createdAt desc`. Defaults to today.
 **Response (201 Created):**
 ```json
 {
-  "id": "cm7k5x...",
+  "id": 1,
   "status": "ACTIVE"
 }
 ```
@@ -357,11 +363,13 @@ Returns bike vehicles sorted by name.
 ### 7.1. Record EDC
 **POST** `/transactions/edc`
 
+> **Balance Side Effect**: If `cashOutAmount > 0`, automatically updates the `edc` balance (cash out + fee).
+
 **Request Body:**
 ```json
 {
   "type": "WITHDRAWAL",
-  "cardType": "DEBIT",
+  "cardType": "VISA",
   "provider": "BCA",
   "amount": 1000000,
   "cashOutAmount": 995000,
@@ -370,10 +378,13 @@ Returns bike vehicles sorted by name.
 }
 ```
 
+- `type`: `WITHDRAWAL` or `PAYMENT`
+- `cardType`: `VISA` or `MASTER`
+
 **Response (201 Created):**
 ```json
 {
-  "id": "cm7k5x...",
+  "id": 1,
   "message": "Transaction recorded"
 }
 ```
@@ -389,6 +400,8 @@ Returns EDC transactions sorted by `createdAt desc`. Defaults to today.
 
 ### 8.1. Record Currency Exchange
 **POST** `/transactions/money-changer`
+
+> **Balance Side Effect**: Automatically updates the `moneychanger` balance with `amountIdr`.
 
 **Request Body:**
 ```json
@@ -408,7 +421,7 @@ Returns EDC transactions sorted by `createdAt desc`. Defaults to today.
 **Response (201 Created):**
 ```json
 {
-  "id": "cm7k5x...",
+  "id": 1,
   "cashFlowType": "OUT"
 }
 ```
@@ -425,20 +438,24 @@ Returns transactions sorted by `createdAt desc`. Defaults to today.
 ### 9.1. Record Cash Transaction
 **POST** `/transactions/cash`
 
+> **Balance Side Effect**: Automatically updates the balance for the given `category`.
+
 **Request Body:**
 ```json
 {
   "type": "OUT",
-  "category": "operational",
+  "category": "lainnya",
   "amount": 50000,
   "description": "Beli Alat Tulis Kantor"
 }
 ```
 
+- `category`: `resto`, `mobil`, `motor`, `edc`, `moneychanger`, or `lainnya` (default: `lainnya`)
+
 **Response (201 Created):**
 ```json
 {
-  "id": "cm7k5x...",
+  "id": 1,
   "balanceAfter": 1550000
 }
 ```
@@ -452,16 +469,43 @@ Returns cash transactions sorted by `createdAt desc`. Defaults to today.
 
 ---
 
-## 10. Master Data
+## 10. Balance Tracking
 
-### 10.1. Get Products (Menu)
+The Balance table tracks running totals per category. It is automatically updated by module APIs (resto, mobil, motor, edc, moneychanger, log kas).
+
+### 10.1. Get Balances
+**GET** `/transactions/balance?category=motor`
+
+- `category` (optional): Filter by `resto`, `mobil`, `motor`, `edc`, `moneychanger`, or `lainnya`. Returns all if omitted.
+
+**Response (200 OK):**
+```json
+[
+  { "id": 1, "category": "resto", "amount": 550000, "vehicleId": "", "totalFee": 0, "updatedAt": "2026-02-22T08:00:00Z" },
+  { "id": 2, "category": "motor", "amount": 200000, "vehicleId": "MTR-001", "totalFee": 0, "updatedAt": "2026-02-22T09:00:00Z" },
+  { "id": 3, "category": "motor", "amount": 150000, "vehicleId": "MTR-002", "totalFee": 0, "updatedAt": "2026-02-22T09:30:00Z" },
+  { "id": 4, "category": "edc", "amount": -995000, "vehicleId": "", "totalFee": 5000, "updatedAt": "2026-02-22T10:00:00Z" }
+]
+```
+
+**Key fields:**
+- `amount`: Running balance (positive = cash in, negative = cash out)
+- `vehicleId`: License plate for `motor`/`mobil` (empty for other categories)
+- `totalFee`: Accumulated fee (only relevant for `edc`)
+- Unique constraint: `(category, vehicleId)` — motor/mobil have one entry per vehicle
+
+---
+
+## 11. Master Data
+
+### 11.1. Get Products (Menu)
 **GET** `/products`
 
 Returns active products sorted by name.
 
 ---
 
-## 11. Cash Flow Logic Summary
+## 12. Cash Flow Logic Summary
 
 ```
 Expected Cash =
@@ -477,6 +521,9 @@ Expected Cash =
 ```
 
 This logic is implemented in `GET /daily/closing/preview`.
+
+### Balance Tracking
+In addition to the closing preview, each module API automatically updates the `Balance` table via `updateBalance()` in `lib/balance.js`. This provides real-time per-category balance tracking accessible via `GET /transactions/balance`.
 
 ---
 

@@ -16,6 +16,8 @@ describe('Transaction Routes', () => {
         it('should record EDC transaction and return 201', async () => {
             mockPrisma.edcTransaction.create.mockResolvedValue({
                 id: 'edc-1',
+                cashOutAmount: 995000,
+                fee: 5000,
             });
 
             const res = await request(app)
@@ -23,7 +25,7 @@ describe('Transaction Routes', () => {
                 .set('Authorization', authHeader())
                 .send({
                     type: 'WITHDRAWAL',
-                    cardType: 'DEBIT',
+                    cardType: 'VISA',
                     provider: 'BCA',
                     amount: 1000000,
                     cashOutAmount: 995000,
@@ -42,7 +44,7 @@ describe('Transaction Routes', () => {
                 .set('Authorization', authHeader())
                 .send({
                     type: 'INVALID',
-                    cardType: 'DEBIT',
+                    cardType: 'VISA',
                     provider: 'BCA',
                     amount: 1000000,
                 });
@@ -71,6 +73,7 @@ describe('Transaction Routes', () => {
         it('should record BUY transaction with cashFlowType OUT', async () => {
             mockPrisma.moneyChangerTransaction.create.mockResolvedValue({
                 id: 'mc-1',
+                amountIdr: 1500000,
             });
 
             const res = await request(app)
@@ -92,6 +95,7 @@ describe('Transaction Routes', () => {
         it('should record SELL transaction with cashFlowType IN', async () => {
             mockPrisma.moneyChangerTransaction.create.mockResolvedValue({
                 id: 'mc-2',
+                amountIdr: 1500000,
             });
 
             const res = await request(app)
@@ -160,7 +164,7 @@ describe('Transaction Routes', () => {
                 .set('Authorization', authHeader())
                 .send({
                     type: 'OUT',
-                    category: 'operational',
+                    category: 'lainnya',
                     amount: 50000,
                     description: 'Beli ATK',
                 });

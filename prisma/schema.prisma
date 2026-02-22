@@ -117,11 +117,23 @@ model MoneyChangerTransaction {
 model CashTransaction {
   id          Int      @id @default(autoincrement())
   type        String   // "IN" or "OUT"
-  category    String   @default("operational") // "operational", "equity", "misc"
+  category    String   @default("lainnya") // "resto", "mobil", "motor", "edc", "moneychanger", "lainnya"
   amount      Float
   description String?
   date        DateTime @db.Date
   createdAt   DateTime @default(now())
+}
+
+// ─── Balance (Per-Category Tracking) ───────────────────────
+model Balance {
+  id        Int      @id @default(autoincrement())
+  category  String   // "resto", "mobil", "motor", "edc", "moneychanger", "lainnya"
+  amount    Float    @default(0)
+  vehicleId String   @default("") // license plate for motor/mobil
+  totalFee  Float    @default(0)  // accumulated fee for EDC
+  updatedAt DateTime @updatedAt
+
+  @@unique([category, vehicleId])
 }
 
 // ─── Master Data ───────────────────────────────────────────

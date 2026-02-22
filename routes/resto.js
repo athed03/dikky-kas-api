@@ -4,6 +4,7 @@ const prisma = require('../lib/prisma');
 const { authenticateToken } = require('../lib/auth');
 const { validate } = require('../lib/validate');
 const { success, error, getTodayDate, parseDate } = require('../lib/response');
+const { updateBalance } = require('../lib/balance');
 
 
 const router = express.Router();
@@ -156,6 +157,7 @@ router.post('/orders', validate(createOrderSchema), async (req, res) => {
  *   post:
  *     tags: [Resto]
  *     summary: Settle an order
+ *     description: Settles an open order. If paymentMethod is Cash, also updates the 'resto' balance.
  *     parameters:
  *       - in: path
  *         name: id
@@ -206,6 +208,11 @@ router.post('/orders/:id/settle', validate(settleOrderSchema), async (req, res) 
                 status: 'SETTLED',
             },
         });
+
+        // Update balance for resto (Cash only)
+        if (paymentMethod === 'Cash') {
+            await updateBalance('resto', order.total, 'IN');
+        }
 
         return success(res, { id: updated.id, status: updated.status });
     } catch (err) {

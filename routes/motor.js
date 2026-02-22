@@ -4,6 +4,7 @@ const prisma = require('../lib/prisma');
 const { authenticateToken } = require('../lib/auth');
 const { validate } = require('../lib/validate');
 const { success, error, getTodayDate, parseDate } = require('../lib/response');
+const { updateBalance } = require('../lib/balance');
 
 
 const router = express.Router();
@@ -25,6 +26,7 @@ const createRentalSchema = z.object({
  *   post:
  *     tags: [Motor (Bike Rental)]
  *     summary: Create bike rental record
+ *     description: Records a bike rental. If paymentMethod is Cash, also updates the 'motor' balance per vehicleId.
  *     requestBody:
  *       required: true
  *       content:
@@ -71,6 +73,11 @@ router.post('/rentals', validate(createRentalSchema), async (req, res) => {
                 date: parseDate(getTodayDate()),
             },
         });
+
+        // Update balance for motor (Cash only, with vehicleId)
+        if (paymentMethod === 'Cash') {
+            await updateBalance('motor', amount, 'IN', { vehicleId });
+        }
 
         return success(res, { id: rental.id, status: rental.status }, 201);
     } catch (err) {

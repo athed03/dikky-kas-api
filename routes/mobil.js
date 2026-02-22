@@ -4,6 +4,7 @@ const prisma = require('../lib/prisma');
 const { authenticateToken } = require('../lib/auth');
 const { validate } = require('../lib/validate');
 const { success, error, getTodayDate, parseDate } = require('../lib/response');
+const { updateBalance } = require('../lib/balance');
 
 
 const router = express.Router();
@@ -25,6 +26,7 @@ const createMobilSchema = z.object({
  *   post:
  *     tags: [Mobil (Car Services)]
  *     summary: Record car service transaction
+ *     description: Records a car service transaction. If paymentMethod is Cash, also updates the 'mobil' balance per vehicleId.
  *     requestBody:
  *       required: true
  *       content:
@@ -70,6 +72,11 @@ router.post('/transactions', validate(createMobilSchema), async (req, res) => {
                 date: parseDate(getTodayDate()),
             },
         });
+
+        // Update balance for mobil (Cash only, with vehicleId)
+        if (paymentMethod === 'Cash') {
+            await updateBalance('mobil', amount, 'IN', { vehicleId: vehicleId || '' });
+        }
 
         return success(res, { id: tx.id, status: tx.status }, 201);
     } catch (err) {

@@ -4,6 +4,7 @@ const prisma = require('../lib/prisma');
 const { authenticateToken } = require('../lib/auth');
 const { validate } = require('../lib/validate');
 const { success, error, getTodayDate, parseDate } = require('../lib/response');
+const { updateBalance } = require('../lib/balance');
 
 
 const router = express.Router();
@@ -31,7 +32,7 @@ const moneyChangerSchema = z.object({
 
 const cashSchema = z.object({
     type: z.enum(['IN', 'OUT']),
-    category: z.string().default('operational'),
+    category: z.enum(['resto', 'mobil', 'motor', 'edc', 'moneychanger', 'lainnya']).default('lainnya'),
     amount: z.number().positive(),
     description: z.string().optional(),
 });
@@ -42,6 +43,7 @@ const cashSchema = z.object({
  *   post:
  *     tags: [EDC Transactions]
  *     summary: Record EDC transaction
+ *     description: Records an EDC transaction. If cashOutAmount > 0, also updates the 'edc' balance (cash out + fee).
  *     requestBody:
  *       required: true
  *       content:
@@ -55,7 +57,7 @@ const cashSchema = z.object({
  *                 enum: [WITHDRAWAL, PAYMENT]
  *               cardType:
  *                 type: string
- *                 enum: [DEBIT, CREDIT]
+ *                 enum: [VISA, MASTER]
  *               provider:
  *                 type: string
  *                 example: BCA
@@ -75,7 +77,7 @@ const cashSchema = z.object({
  *                 example: REF123456
  *     responses:
  *       201:
- *         description: Transaction recorded
+ *         description: Transaction recorded. Updates 'edc' balance if cashOutAmount > 0.
  */
 router.post('/edc', validate(edcSchema), async (req, res) => {
     try {
@@ -85,6 +87,11 @@ router.post('/edc', validate(edcSchema), async (req, res) => {
                 date: parseDate(getTodayDate()),
             },
         });
+
+        // Update balance: EDC withdrawal = cash out
+        if (tx.cashOutAmount > 0) {
+            await updateBalance('edc', tx.cashOutAmount, 'OUT', { fee: tx.fee });
+        }
 
         return success(res, { id: tx.id, message: 'Transaction recorded' }, 201);
     } catch (err) {
@@ -133,7 +140,7 @@ router.get('/edc', async (req, res) => {
  *   post:
  *     tags: [Money Changer]
  *     summary: Record currency exchange
- *     description: "BUY = We buy foreign currency (Cash Out). SELL = We sell foreign currency (Cash In)."
+ *     description: "BUY = We buy foreign currency (Cash Out). SELL = We sell foreign currency (Cash In). Automatically updates the 'moneychanger' balance."
  *     requestBody:
  *       required: true
  *       content:
@@ -186,6 +193,9 @@ router.post('/money-changer', validate(moneyChangerSchema), async (req, res) => 
 
         const cashFlowType = req.body.type === 'BUY' ? 'OUT' : 'IN';
 
+        // Update balance for money changer
+        await updateBalance('moneychanger', tx.amountIdr, cashFlowType);
+
         return success(res, { id: tx.id, cashFlowType }, 201);
     } catch (err) {
         console.error('Money changer transaction error:', err);
@@ -233,6 +243,7 @@ router.get('/money-changer', async (req, res) => {
  *   post:
  *     tags: [Log Kas (Cash Flow)]
  *     summary: Record cash transaction
+ *     description: Records a cash IN/OUT transaction and updates the balance for the given category.
  *     requestBody:
  *       required: true
  *       content:
@@ -246,8 +257,9 @@ router.get('/money-changer', async (req, res) => {
  *                 enum: [IN, OUT]
  *               category:
  *                 type: string
- *                 default: operational
- *                 enum: [operational, equity, misc]
+ *                 default: lainnya
+ *                 enum: [resto, mobil, motor, edc, moneychanger, lainnya]
+ *                 description: Balance category to update
  *               amount:
  *                 type: number
  *                 example: 50000
@@ -276,6 +288,9 @@ router.post('/cash', validate(cashSchema), async (req, res) => {
         const tx = await prisma.cashTransaction.create({
             data: { type, category, amount, description, date },
         });
+
+        // Update balance for the chosen category
+        await updateBalance(category, amount, type);
 
         const session = await prisma.dailySession.findFirst({
             where: { date },
@@ -331,4 +346,70 @@ router.get('/cash', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /transactions/balance:
+ *   get:
+ *     tags: [Balance]
+ *     summary: Get balance records per category
+ *     description: Returns all balance records. For motor/mobil categories, each vehicleId has its own balance entry.
+ *     parameters:
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [resto, mobil, motor, edc, moneychanger, lainnya]
+ *         description: Filter by category (optional, returns all if omitted)
+ *     responses:
+ *       200:
+ *         description: List of balance records
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   category:
+ *                     type: string
+ *                     enum: [resto, mobil, motor, edc, moneychanger, lainnya]
+ *                   amount:
+ *                     type: number
+ *                     description: Running balance amount for this category
+ *                   vehicleId:
+ *                     type: string
+ *                     description: License plate (only for motor/mobil, empty string for others)
+ *                   totalFee:
+ *                     type: number
+ *                     description: Accumulated fee (only for EDC, 0 for others)
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *             example:
+ *               - { id: 1, category: "resto", amount: 550000, vehicleId: "", totalFee: 0, updatedAt: "2026-02-22T08:00:00Z" }
+ *               - { id: 2, category: "motor", amount: 200000, vehicleId: "B 1234 XYZ", totalFee: 0, updatedAt: "2026-02-22T09:00:00Z" }
+ *               - { id: 3, category: "edc", amount: -995000, vehicleId: "", totalFee: 5000, updatedAt: "2026-02-22T10:00:00Z" }
+ */
+router.get('/balance', async (req, res) => {
+    try {
+        const where = {};
+        if (req.query.category) {
+            where.category = req.query.category;
+        }
+
+        const balances = await prisma.balance.findMany({
+            where,
+            orderBy: [{ category: 'asc' }, { vehicleId: 'asc' }],
+        });
+
+        return success(res, balances);
+    } catch (err) {
+        console.error('Get balances error:', err);
+        return error(res, 'Internal server error');
+    }
+});
+
 module.exports = router;
+

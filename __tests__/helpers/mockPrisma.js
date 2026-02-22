@@ -22,6 +22,7 @@ const mockPrisma = {
     edcTransaction: createModelMock(),
     moneyChangerTransaction: createModelMock(),
     cashTransaction: createModelMock(),
+    balance: { ...createModelMock(), upsert: jest.fn().mockResolvedValue({ id: 'mock-id' }) },
     product: createModelMock(),
     vehicle: createModelMock(),
 };
