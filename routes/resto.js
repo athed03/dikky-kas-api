@@ -140,6 +140,7 @@ router.post('/orders', validate(createOrderSchema), async (req, res) => {
                 subtotal,
                 tax,
                 total,
+                createdBy: req.user.username,
                 date: parseDate(getTodayDate()),
             },
         });

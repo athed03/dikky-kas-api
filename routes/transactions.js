@@ -84,6 +84,7 @@ router.post('/edc', validate(edcSchema), async (req, res) => {
         const tx = await prisma.edcTransaction.create({
             data: {
                 ...req.body,
+                createdBy: req.user.username,
                 date: parseDate(getTodayDate()),
             },
         });
@@ -187,6 +188,7 @@ router.post('/money-changer', validate(moneyChangerSchema), async (req, res) => 
         const tx = await prisma.moneyChangerTransaction.create({
             data: {
                 ...req.body,
+                createdBy: req.user.username,
                 date: parseDate(getTodayDate()),
             },
         });
@@ -286,7 +288,7 @@ router.post('/cash', validate(cashSchema), async (req, res) => {
         const date = parseDate(getTodayDate());
 
         const tx = await prisma.cashTransaction.create({
-            data: { type, category, amount, description, date },
+            data: { type, category, amount, description, createdBy: req.user.username, date },
         });
 
         // Update balance for the chosen category

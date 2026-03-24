@@ -70,6 +70,7 @@ router.post('/rentals', validate(createRentalSchema), async (req, res) => {
                 amount,
                 paymentMethod,
                 notes,
+                createdBy: req.user.username,
                 date: parseDate(getTodayDate()),
             },
         });

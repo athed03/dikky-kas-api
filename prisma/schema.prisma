@@ -53,6 +53,7 @@ model Order {
   status        String   @default("OPEN") // "OPEN", "SETTLED", "VOID"
   paymentMethod String?  // "Cash", "QRIS", "Debit", "Credit"
   amountPaid    Float?
+  createdBy     String   @default("")
   date          DateTime @db.Date
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -68,6 +69,7 @@ model MobilTransaction {
   paymentMethod String   @default("Cash")
   notes         String?
   status        String   @default("COMPLETED")
+  createdBy     String   @default("")
   date          DateTime @db.Date
   createdAt     DateTime @default(now())
 }
@@ -82,6 +84,7 @@ model MotorRental {
   paymentMethod String   @default("Cash")
   notes         String?
   status        String   @default("ACTIVE") // "ACTIVE", "RETURNED"
+  createdBy     String   @default("")
   date          DateTime @db.Date
   createdAt     DateTime @default(now())
 }
@@ -96,6 +99,7 @@ model EdcTransaction {
   cashOutAmount Float   @default(0) // Amount given to customer
   fee          Float    @default(0)
   refNumber    String?
+  createdBy    String   @default("")
   date         DateTime @db.Date
   createdAt    DateTime @default(now())
 }
@@ -109,6 +113,7 @@ model MoneyChangerTransaction {
   rate          Float
   amountIdr     Float
   notaNumber    String?
+  createdBy     String   @default("")
   date          DateTime @db.Date
   createdAt     DateTime @default(now())
 }
@@ -120,6 +125,7 @@ model CashTransaction {
   category    String   @default("lainnya") // "resto", "mobil", "motor", "edc", "moneychanger", "lainnya"
   amount      Float
   description String?
+  createdBy   String   @default("")
   date        DateTime @db.Date
   createdAt   DateTime @default(now())
 }

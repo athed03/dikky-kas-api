@@ -69,6 +69,7 @@ router.post('/transactions', validate(createMobilSchema), async (req, res) => {
                 amount,
                 paymentMethod,
                 notes,
+                createdBy: req.user.username,
                 date: parseDate(getTodayDate()),
             },
         });

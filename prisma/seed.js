@@ -70,12 +70,14 @@ async function main() {
 
     console.log('✅ Products seeded');
 
-    // ─── Vehicles (Motor/Bike) ───────────────────────────────
+    // ─── Vehicles (Motor/Bike + Mobil/Car) ─────────────────────
     const vehicles = [
         { plate: 'B 1234 AB', name: 'Honda Beat', type: 'bike' },
         { plate: 'B 5678 CD', name: 'Yamaha NMAX', type: 'bike' },
         { plate: 'B 9012 EF', name: 'Honda Vario', type: 'bike' },
         { plate: 'B 3456 GH', name: 'Yamaha Mio', type: 'bike' },
+        { plate: 'DK 1234 AB', name: 'Toyota Avanza', type: 'car' },
+        { plate: 'DK 5678 CD', name: 'Daihatsu Xenia', type: 'car' },
     ];
 
     for (const vehicle of vehicles) {

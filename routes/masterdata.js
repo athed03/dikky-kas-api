@@ -45,4 +45,40 @@ router.get('/products', async (req, res) => {
     }
 });
 
+/**
+ * @swagger
+ * /vehicles:
+ *   get:
+ *     tags: [Master Data]
+ *     summary: Get vehicles (bikes and cars)
+ *     parameters:
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [bike, car]
+ *         description: Filter by vehicle type
+ *     responses:
+ *       200:
+ *         description: List of vehicles
+ */
+router.get('/vehicles', async (req, res) => {
+    try {
+        const where = {};
+        if (req.query.type) {
+            where.type = req.query.type;
+        }
+
+        const vehicles = await prisma.vehicle.findMany({
+            where,
+            orderBy: { name: 'asc' },
+        });
+
+        return success(res, vehicles);
+    } catch (err) {
+        console.error('Get vehicles error:', err);
+        return error(res, 'Internal server error');
+    }
+});
+
 module.exports = router;
