@@ -9,7 +9,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "node prisma/seed.js",
     "prisma:studio": "prisma studio",
-    "test": "jest --verbose --forceExit"
+    "test": "jest --verbose --forceExit",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
