@@ -43,6 +43,11 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// ─── Root Route ────────────────────────────────────────────
+app.get('/', (req, res) => {
+    res.redirect('/api/docs');
+});
+
 // ─── 404 Handler ───────────────────────────────────────────
 app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });
