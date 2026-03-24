@@ -20,9 +20,15 @@ app.use(cors());
 app.use(express.json());
 
 // ─── Swagger Docs ──────────────────────────────────────────
+const CSS_URL = "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.3.0/swagger-ui.min.css";
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'Dikky Kas API Docs',
+    customCssUrl: CSS_URL,
+    customJs: [
+        "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.3.0/swagger-ui-bundle.min.js",
+        "https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.3.0/swagger-ui-standalone-preset.min.js"
+    ]
 }));
 
 // ─── API Routes (v1) ───────────────────────────────────────
