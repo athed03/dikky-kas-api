@@ -494,18 +494,103 @@ The Balance table tracks running totals per category. It is automatically update
 - `totalFee`: Accumulated fee (only relevant for `edc`)
 - Unique constraint: `(category, vehicleId)` — motor/mobil have one entry per vehicle
 
+## 11. Central Balance (Kluis / Akun Utama)
+
+Central Balance manages main accounts (e.g., Cash, Bank) separate from module-level balance tracking.
+
+### 11.1. Get Accounts
+**GET** `/central/accounts`
+
+Returns all central accounts. If no accounts exist, automatically creates defaults (`cash`, `bank`).
+
+**Response (200 OK):**
+```json
+[
+  { "id": 1, "name": "cash", "label": "Cash", "amount": 500000, "updatedAt": "2026-03-27T10:00:00Z" },
+  { "id": 2, "name": "bank", "label": "Bank", "amount": 1000000, "updatedAt": "2026-03-27T10:00:00Z" }
+]
+```
+
+### 11.2. Create Movement
+**POST** `/central/movements`
+
+> **Balance Side Effect**: Atomically updates account balance(s) based on type.
+
+**Types:**
+| Type | Effect |
+|------|--------|
+| `EXPENSE` | Decreases `account` balance |
+| `INCOME` | Increases `account` balance |
+| `TRANSFER` | Decreases `fromAccount`, increases `toAccount` |
+
+**Request Body (EXPENSE/INCOME):**
+```json
+{
+  "type": "EXPENSE",
+  "account": "cash",
+  "amount": 100000,
+  "description": "Modal outlet"
+}
+```
+
+**Request Body (TRANSFER):**
+```json
+{
+  "type": "TRANSFER",
+  "fromAccount": "bank",
+  "toAccount": "cash",
+  "amount": 500000,
+  "description": "Top up kas dari bank"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": 1,
+  "message": "Movement recorded"
+}
+```
+
+**Errors:**
+- `400` — Validation failed (missing account/fromAccount/toAccount, invalid type)
+- `400` — Account not found (Prisma P2025)
+
+### 11.3. Get Movements (History)
+**GET** `/central/movements?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
+
+Returns movements within date range. Defaults to today if omitted.
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "type": "EXPENSE",
+    "account": "cash",
+    "fromAccount": null,
+    "toAccount": null,
+    "amount": 100000,
+    "description": "Modal outlet",
+    "createdBy": "dikky",
+    "date": "2026-03-27T00:00:00.000Z",
+    "createdAt": "2026-03-27T08:30:00.000Z"
+  }
+]
+```
+
 ---
 
-## 11. Master Data
+## 12. Master Data
 
-### 11.1. Get Products (Menu)
+### 12.1. Get Products (Menu)
 **GET** `/products`
 
 Returns active products sorted by name.
 
 ---
 
-## 12. Cash Flow Logic Summary
+## 13. Cash Flow Logic Summary
 
 ```
 Expected Cash =
@@ -524,6 +609,9 @@ This logic is implemented in `GET /daily/closing/preview`.
 
 ### Balance Tracking
 In addition to the closing preview, each module API automatically updates the `Balance` table via `updateBalance()` in `lib/balance.js`. This provides real-time per-category balance tracking accessible via `GET /transactions/balance`.
+
+### Central Balance
+Central Balance is separate from module balance tracking. It manages main accounts (cash, bank) and tracks movements via `CentralAccount` and `CentralMovement` tables, accessible via `/central/*` endpoints.
 
 ---
 

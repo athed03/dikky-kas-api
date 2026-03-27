@@ -25,13 +25,17 @@ const mockPrisma = {
     balance: { ...createModelMock(), upsert: jest.fn().mockResolvedValue({ id: 'mock-id' }) },
     product: createModelMock(),
     vehicle: createModelMock(),
+    centralAccount: { ...createModelMock(), upsert: jest.fn().mockResolvedValue({ id: 'mock-id' }) },
+    centralMovement: createModelMock(),
+    $transaction: jest.fn(async (fn) => fn(mockPrisma)),
 };
 
 /**
  * Reset all mocks to their default state
  */
 function resetAllMocks() {
-    for (const model of Object.values(mockPrisma)) {
+    for (const [key, model] of Object.entries(mockPrisma)) {
+        if (key === '$transaction') continue; // skip $transaction
         for (const fn of Object.values(model)) {
             if (typeof fn.mockReset === 'function') {
                 fn.mockReset();
@@ -40,9 +44,15 @@ function resetAllMocks() {
         }
     }
     // Restore default findMany to return []
-    for (const model of Object.values(mockPrisma)) {
+    for (const [key, model] of Object.entries(mockPrisma)) {
+        if (key === '$transaction') continue;
         model.findMany.mockResolvedValue([]);
     }
+    // Restore upsert defaults
+    mockPrisma.balance.upsert.mockResolvedValue({ id: 'mock-id' });
+    mockPrisma.centralAccount.upsert.mockResolvedValue({ id: 'mock-id' });
+    // Restore $transaction as passthrough
+    mockPrisma.$transaction.mockImplementation(async (fn) => fn(mockPrisma));
 }
 
 module.exports = { mockPrisma, resetAllMocks };
