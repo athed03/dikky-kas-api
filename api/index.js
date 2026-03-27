@@ -11,6 +11,7 @@ const restoRoutes = require('../routes/resto');
 const mobilRoutes = require('../routes/mobil');
 const motorRoutes = require('../routes/motor');
 const transactionRoutes = require('../routes/transactions');
+const centralRoutes = require('../routes/central');
 const masterdataRoutes = require('../routes/masterdata');
 
 const app = express();
@@ -40,6 +41,7 @@ v1.use('/resto', restoRoutes);
 v1.use('/mobil', mobilRoutes);
 v1.use('/motor', motorRoutes);
 v1.use('/transactions', transactionRoutes);
+v1.use('/central', centralRoutes);
 v1.use('/', masterdataRoutes); // /products mounted at root of v1
 
 app.use('/api/v1', v1);

@@ -160,3 +160,25 @@ model Vehicle {
   status    String   @default("AVAILABLE") // "AVAILABLE", "RENTED"
   createdAt DateTime @default(now())
 }
+
+// ─── Central Balance (Kluis / Akun Utama) ──────────────────
+model CentralAccount {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique  // "cash", "bank_bca", etc.
+  label     String             // "Cash", "Bank BCA"
+  amount    Float    @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model CentralMovement {
+  id          Int      @id @default(autoincrement())
+  type        String   // "EXPENSE", "INCOME", "TRANSFER"
+  fromAccount String?  // source account name (for TRANSFER)
+  toAccount   String?  // dest account name (for TRANSFER)
+  account     String?  // for EXPENSE / INCOME
+  amount      Float
+  description String?
+  createdBy   String   @default("")
+  date        DateTime @db.Date
+  createdAt   DateTime @default(now())
+}
