@@ -183,24 +183,31 @@ router.post('/opening-balance', validate(openingBalanceSchema), async (req, res)
  */
 router.get('/closing/preview', async (req, res) => {
     try {
-        const dateStr = req.query.date || getTodayDate();
-        const date = parseDate(dateStr);
-
-        const session = await prisma.dailySession.findFirst({
-            where: { date },
-        });
+        // Find session by id, or fallback to latest OPEN session
+        let session;
+        if (req.query.sessionId) {
+            session = await prisma.dailySession.findUnique({
+                where: { id: req.query.sessionId },
+            });
+        } else {
+            session = await prisma.dailySession.findFirst({
+                where: { status: 'OPEN' },
+                orderBy: { createdAt: 'desc' },
+            });
+        }
 
         if (!session) {
-            return error(res, 'No opening balance found for this date', 404);
+            return error(res, 'No opening balance found', 404);
         }
 
         const openingBalance = session.openingAmount;
+        const sinceDate = session.createdAt; // all txns since session opened
         const transactions = [];
         let expectedCash = openingBalance;
 
         // Resto orders (SETTLED + Cash only)
         const restoOrders = await prisma.order.findMany({
-            where: { date, status: 'SETTLED', paymentMethod: 'Cash' },
+            where: { status: 'SETTLED', paymentMethod: 'Cash', createdAt: { gte: sinceDate } },
             orderBy: { createdAt: 'asc' },
         });
         for (const o of restoOrders) {
@@ -216,7 +223,7 @@ router.get('/closing/preview', async (req, res) => {
 
         // Mobil transactions (Cash only)
         const mobilTxs = await prisma.mobilTransaction.findMany({
-            where: { date, paymentMethod: 'Cash' },
+            where: { paymentMethod: 'Cash', createdAt: { gte: sinceDate } },
             orderBy: { createdAt: 'asc' },
         });
         for (const m of mobilTxs) {
@@ -232,7 +239,7 @@ router.get('/closing/preview', async (req, res) => {
 
         // Motor rentals (Cash only)
         const motorTxs = await prisma.motorRental.findMany({
-            where: { date, paymentMethod: 'Cash' },
+            where: { paymentMethod: 'Cash', createdAt: { gte: sinceDate } },
             orderBy: { createdAt: 'asc' },
         });
         for (const r of motorTxs) {
@@ -248,7 +255,7 @@ router.get('/closing/preview', async (req, res) => {
 
         // EDC transactions (WITHDRAWAL = cash out)
         const edcTxs = await prisma.edcTransaction.findMany({
-            where: { date },
+            where: { createdAt: { gte: sinceDate } },
             orderBy: { createdAt: 'asc' },
         });
         for (const e of edcTxs) {
@@ -266,7 +273,7 @@ router.get('/closing/preview', async (req, res) => {
 
         // Money Changer (SELL = Cash In, BUY = Cash Out)
         const mcTxs = await prisma.moneyChangerTransaction.findMany({
-            where: { date },
+            where: { createdAt: { gte: sinceDate } },
             orderBy: { createdAt: 'asc' },
         });
         for (const mc of mcTxs) {
@@ -283,7 +290,7 @@ router.get('/closing/preview', async (req, res) => {
 
         // Cash transactions (Log Kas)
         const cashTxs = await prisma.cashTransaction.findMany({
-            where: { date },
+            where: { createdAt: { gte: sinceDate } },
             orderBy: { createdAt: 'asc' },
         });
         for (const c of cashTxs) {
@@ -300,6 +307,7 @@ router.get('/closing/preview', async (req, res) => {
         transactions.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
         return success(res, {
+            sessionId: session.id,
             openingBalance,
             transactions,
             expectedCash,
@@ -360,7 +368,6 @@ router.get('/closing/preview', async (req, res) => {
 router.post('/closing', validate(closingSchema), async (req, res) => {
     try {
         const { actualCash, expectedCash, supervisorCode, notes } = req.body;
-        const date = parseDate(getTodayDate());
         const difference = actualCash - expectedCash;
 
         if (difference !== 0 && !supervisorCode) {
@@ -386,12 +393,14 @@ router.post('/closing', validate(closingSchema), async (req, res) => {
             }
         }
 
+        // Find latest OPEN session (could be from any day)
         const session = await prisma.dailySession.findFirst({
-            where: { date, status: 'OPEN' },
+            where: { status: 'OPEN' },
+            orderBy: { createdAt: 'desc' },
         });
 
         if (!session) {
-            return error(res, 'No open session found for today', 404);
+            return error(res, 'No open session found', 404);
         }
 
         const updated = await prisma.dailySession.update({
