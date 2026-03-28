@@ -187,12 +187,12 @@ router.get('/closing/preview', async (req, res) => {
         let session;
         if (req.query.sessionId) {
             session = await prisma.dailySession.findUnique({
-                where: { id: req.query.sessionId },
+                where: { id: parseInt(req.query.sessionId, 10) },
             });
         } else {
             session = await prisma.dailySession.findFirst({
                 where: { status: 'OPEN' },
-                orderBy: { createdAt: 'desc' },
+                orderBy: { openedAt: 'desc' },
             });
         }
 
@@ -201,7 +201,7 @@ router.get('/closing/preview', async (req, res) => {
         }
 
         const openingBalance = session.openingAmount;
-        const sinceDate = session.createdAt; // all txns since session opened
+        const sinceDate = session.openedAt; // all txns since session opened
         const transactions = [];
         let expectedCash = openingBalance;
 
@@ -396,7 +396,7 @@ router.post('/closing', validate(closingSchema), async (req, res) => {
         // Find latest OPEN session (could be from any day)
         const session = await prisma.dailySession.findFirst({
             where: { status: 'OPEN' },
-            orderBy: { createdAt: 'desc' },
+            orderBy: { openedAt: 'desc' },
         });
 
         if (!session) {
