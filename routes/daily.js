@@ -28,13 +28,6 @@ const closingSchema = z.object({
  *   get:
  *     tags: [Daily Operations]
  *     summary: Check opening balance
- *     parameters:
- *       - in: query
- *         name: date
- *         schema:
- *           type: string
- *           format: date
- *         description: Date in YYYY-MM-DD format (defaults to today)
  *     responses:
  *       200:
  *         description: Opening balance info
@@ -55,11 +48,9 @@ const closingSchema = z.object({
  */
 router.get('/opening-balance', async (req, res) => {
     try {
-        const dateStr = req.query.date || getTodayDate();
-        const date = parseDate(dateStr);
-
         const session = await prisma.dailySession.findFirst({
-            where: { date },
+            where: { status: 'OPEN' },
+            orderBy: { openedAt: 'desc' },
             include: { user: { select: { username: true } } },
         });
 
